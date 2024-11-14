@@ -462,6 +462,7 @@ generate_shared_vertices_index_list :: proc(piTriList_in_and_out: []int, pContex
 	}
 
 	pTmpVert := make([]Tmp_Vert, iMaxCount)
+	defer delete(pTmpVert)
 
 	// complete the merge
 	for k in 0 ..< g_cells {

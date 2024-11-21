@@ -1371,7 +1371,7 @@ quick_sort :: proc(pSortBuffer: []int, iLeft: int, iRight: int, uSeed: u32) {
 
 	for {
 		for (pSortBuffer[iL] < iMid) {
-			iL -= 1
+			iL += 1
 		}
 		for (pSortBuffer[iR] > iMid) {
 			iR -= 1

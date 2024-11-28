@@ -111,10 +111,16 @@ generate_tangents :: proc(pContext: ^Context, fAngularThreshold: f32 = 180.0) ->
 	if iNrTrianglesIn <= 0 do return false
 
 	// allocate memory for an index list
-	piTriListIn, err := make([]int, 3 * iNrTrianglesIn)
+	piTriListIn := make([]int, 3 * iNrTrianglesIn)
+	if piTriListIn == nil {
+		return false
+	}
 	defer delete(piTriListIn)
 
-	pTriInfos, err2 := make([]Tri_Info, iNrTrianglesIn)
+	pTriInfos := make([]Tri_Info, iNrTrianglesIn)
+	if pTriInfos == nil {
+		return false
+	}
 	defer delete(pTriInfos)
 
 	// make an initial triangle . face index list
@@ -133,8 +139,7 @@ generate_tangents :: proc(pContext: ^Context, fAngularThreshold: f32 = 180.0) ->
 		p0 := get_position(pContext, i0)
 		p1 := get_position(pContext, i1)
 		p2 := get_position(pContext, i2)
-		if (p0 == p1) || (p0 == p2) || (p1 == p2) // degenerate
-		{
+		if (p0 == p1) || (p0 == p2) || (p1 == p2) { 	// degenerate
 			pTriInfos[t].iFlag |= {.MarkDegenerate}
 			iDegenTriangles += 1
 		}
@@ -730,8 +735,8 @@ generate_initial_vertices_index_list :: proc(pTriInfos: []Tri_Info, piTriList_ou
 					P1 := get_position(pContext, i1)
 					P2 := get_position(pContext, i2)
 					P3 := get_position(pContext, i3)
-					distSQ_02 := linalg.length2(P2 - P0)
-					distSQ_13 := linalg.length2(P3 - P1)
+					distSQ_02 = linalg.length2(P2 - P0)
+					distSQ_13 = linalg.length2(P3 - P1)
 
 					bQuadDiagIs_02 = distSQ_13 < distSQ_02 ? false : true
 				}
@@ -851,7 +856,6 @@ calc_tex_area :: proc(pContext: ^Context, indices: []int) -> f32 {
 
 @(private)
 init_tri_info :: proc(pTriInfos: []Tri_Info, piTriListIn: []int, pContext: ^Context, iNrTrianglesIn: int) {
-	f, i, t: int
 	// pTriInfos[f].iFlag is cleared in GenerateInitialVerticesIndexList() which is called before this function.
 
 	// generate neighbor info list
@@ -919,12 +923,13 @@ init_tri_info :: proc(pTriInfos: []Tri_Info, piTriListIn: []int, pContext: ^Cont
 		}
 	}
 
+	t: int
+
 	// force otherwise healthy quads to a fixed orientation
 	for (t < (iNrTrianglesIn - 1)) {
 		iFO_a := pTriInfos[t].iOrgFaceNumber
 		iFO_b := pTriInfos[t + 1].iOrgFaceNumber
-		if iFO_a == iFO_b // this is a quad
-		{
+		if iFO_a == iFO_b { 	// this is a quad
 			bIsDeg_a := .MarkDegenerate in pTriInfos[t].iFlag
 			bIsDeg_b := .MarkDegenerate in pTriInfos[t + 1].iFlag
 
@@ -982,7 +987,7 @@ build_4_rule_groups :: proc(
 ) -> int {
 	iNrMaxGroups := iNrTrianglesIn * 3
 	iNrActiveGroups: int
-	iOffset, f, i: int
+	iOffset: int
 
 	for f in 0 ..< iNrTrianglesIn {
 		for i in 0 ..< 3 {
@@ -1003,16 +1008,14 @@ build_4_rule_groups :: proc(
 				bOrPre = .OrientPreserving in pTriInfos[f].iFlag
 				neigh_indexL = pTriInfos[f].FaceNeighbors[i]
 				neigh_indexR = pTriInfos[f].FaceNeighbors[i > 0 ? (i - 1) : 2]
-				if neigh_indexL >= 0 // neighbor
-				{
+				if neigh_indexL >= 0 { 	// neighbor
 					bAnswer := assign_recur(piTriListIn, pTriInfos, neigh_indexL, pTriInfos[f].AssignedGroup[i])
 
 					bOrPre2 := .OrientPreserving in pTriInfos[neigh_indexL].iFlag
 					bDiff := bOrPre != bOrPre2 ? true : false
 					assert(bAnswer || bDiff)
 				}
-				if neigh_indexR >= 0 // neighbor
-				{
+				if neigh_indexR >= 0 { 	// neighbor
 					bAnswer := assign_recur(piTriListIn, pTriInfos, neigh_indexR, pTriInfos[f].AssignedGroup[i])
 
 					bOrPre2 := .OrientPreserving in pTriInfos[neigh_indexR].iFlag
@@ -1065,6 +1068,7 @@ assign_recur :: proc(piTriListIn: []int, psTriInfos: []Tri_Info, iMyTriIndex: in
 			pMyTriInfo.iFlag |= (pGroup.bOrientPreservering ? {.OrientPreserving} : {})
 		}
 	}
+
 	{
 		bOrient := .OrientPreserving in pMyTriInfo.iFlag
 		if bOrient != pGroup.bOrientPreservering do return false
@@ -1101,7 +1105,7 @@ generate_t_spaces :: proc(
 	fThresCos: f32,
 	pContext: ^Context,
 ) -> bool {
-	iMaxNrFaces, iUniqueTspaces, g, i: int
+	iMaxNrFaces, iUniqueTspaces: int
 	for g in 0 ..< iNrActiveGroups {
 		if iMaxNrFaces < pGroups[g].iNrFaces {
 			iMaxNrFaces = pGroups[g].iNrFaces
@@ -1127,12 +1131,12 @@ generate_t_spaces :: proc(
 	iUniqueTspaces = 0
 	for g in 0 ..< iNrActiveGroups {
 		pGroup := &pGroups[g]
-		iUniqueSubGroups, s: int
+		iUniqueSubGroups: int
 
 		for i in 0 ..< pGroup.iNrFaces {
 			f := pGroup.pFaceIndices[i] // triangle number
 			index, iVertIndex, iOF_1 := -1, -1, -1
-			iMembers, j, l: int
+			iMembers, l: int
 			tmp_group: Sub_Group
 			bFound: bool
 			n, vOs, vOt: Vec3
@@ -1268,7 +1272,6 @@ eval_t_space :: proc(
 ) -> T_Space {
 	res: T_Space
 	fAngleSum: f32
-	face: int
 
 	for face in 0 ..< iFaces {
 		f := face_indices[face]
@@ -1479,7 +1482,7 @@ build_neighbors_fast :: proc(pTriInfos: []Tri_Info, pEdges: []Edge, piTriListIn:
 			}
 
 			if !bNotFound {
-				t := pEdges[j].f
+				t = pEdges[j].f
 				pTriInfos[f].FaceNeighbors[edgenum_A] = t
 				pTriInfos[t].FaceNeighbors[edgenum_B] = f
 			}
@@ -1627,8 +1630,7 @@ degen_prologue :: proc(pTriInfos: []Tri_Info, piTriList_out: []int, iNrTriangles
 	for t < (iTotTris - 1) {
 		iFO_a := pTriInfos[t].iOrgFaceNumber
 		iFO_b := pTriInfos[t + 1].iOrgFaceNumber
-		if iFO_a == iFO_b // this is a quad
-		{
+		if iFO_a == iFO_b { 	// this is a quad
 			bIsDeg_a := .MarkDegenerate in pTriInfos[t].iFlag
 			bIsDeg_b := .MarkDegenerate in pTriInfos[t + 1].iFlag
 
@@ -1658,7 +1660,7 @@ degen_prologue :: proc(pTriInfos: []Tri_Info, piTriList_out: []int, iNrTriangles
 			// search for the first good triangle.
 			bJustADegenerate := true
 			for (bJustADegenerate && iNextGoodTriangleSearchIndex < iTotTris) {
-				bIsGood := .MarkDegenerate not_in pTriInfos[iNextGoodTriangleSearchIndex].iFlag
+				bIsGood = .MarkDegenerate not_in pTriInfos[iNextGoodTriangleSearchIndex].iFlag
 				if bIsGood {
 					bJustADegenerate = false
 				} else {
@@ -1674,7 +1676,6 @@ degen_prologue :: proc(pTriInfos: []Tri_Info, piTriList_out: []int, iNrTriangles
 
 			// swap triangle t0 and t1
 			if !bJustADegenerate {
-				i: int
 				for i in 0 ..< 3 {
 					index := piTriList_out[t0 * 3 + i]
 					piTriList_out[t0 * 3 + i] = piTriList_out[t1 * 3 + i]

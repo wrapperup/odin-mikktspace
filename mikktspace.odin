@@ -84,7 +84,7 @@ Context :: struct {
 
 // Generates tangents using the provided interface and user data.
 // Returns true if the operation succeeded, otherwise false.
-generate_tangents :: proc(pContext: ^Context, fAngularThreshold: f32 = 180.0) -> bool {
+generate_tangents :: proc(pContext: ^Context, fAngularThreshold: f32 = 180.0, allocator := context.allocator) -> bool {
 	// count nr_triangles
 	iNrTrianglesIn: int
 	iNrTSPaces, iTotTris, iDegenTriangles, iNrMaxGroups: int
@@ -111,13 +111,13 @@ generate_tangents :: proc(pContext: ^Context, fAngularThreshold: f32 = 180.0) ->
 	if iNrTrianglesIn <= 0 do return false
 
 	// allocate memory for an index list
-	piTriListIn := make([]int, 3 * iNrTrianglesIn)
+	piTriListIn := make([]int, 3 * iNrTrianglesIn, allocator)
 	if piTriListIn == nil {
 		return false
 	}
 	defer delete(piTriListIn)
 
-	pTriInfos := make([]Tri_Info, iNrTrianglesIn)
+	pTriInfos := make([]Tri_Info, iNrTrianglesIn, allocator)
 	if pTriInfos == nil {
 		return false
 	}
@@ -127,7 +127,7 @@ generate_tangents :: proc(pContext: ^Context, fAngularThreshold: f32 = 180.0) ->
 	iNrTSPaces = generate_initial_vertices_index_list(pTriInfos, piTriListIn, pContext, iNrTrianglesIn)
 
 	// make a welded index list of identical positions and attributes (pos, norm, texc)
-	generate_shared_vertices_index_list(piTriListIn, pContext, iNrTrianglesIn)
+	generate_shared_vertices_index_list(piTriListIn, pContext, iNrTrianglesIn, allocator)
 
 	// Mark all degenerate triangles
 	iTotTris = iNrTrianglesIn
@@ -154,15 +154,15 @@ generate_tangents :: proc(pContext: ^Context, fAngularThreshold: f32 = 180.0) ->
 	degen_prologue(pTriInfos, piTriListIn, iNrTrianglesIn, iTotTris)
 
 	// evaluate triangle level attributes and neighbor list
-	init_tri_info(pTriInfos, piTriListIn, pContext, iNrTrianglesIn)
+	init_tri_info(pTriInfos, piTriListIn, pContext, iNrTrianglesIn, allocator)
 
 	// based on the 4 rules, identify groups based on connectivity
 	iNrMaxGroups = iNrTrianglesIn * 3
 
-	pGroups := make([]Group, iNrMaxGroups)
+	pGroups := make([]Group, iNrMaxGroups, allocator)
 	defer delete(pGroups)
 
-	piGroupTrianglesBuffer := make([]int, iNrTrianglesIn * 3)
+	piGroupTrianglesBuffer := make([]int, iNrTrianglesIn * 3, allocator)
 	defer delete(piGroupTrianglesBuffer)
 
 	if pGroups == nil || piGroupTrianglesBuffer == nil {
@@ -171,7 +171,7 @@ generate_tangents :: proc(pContext: ^Context, fAngularThreshold: f32 = 180.0) ->
 
 	iNrActiveGroups = build_4_rule_groups(pTriInfos, pGroups, piGroupTrianglesBuffer, piTriListIn, iNrTrianglesIn)
 
-	psTspace := make([]T_Space, iNrTSPaces)
+	psTspace := make([]T_Space, iNrTSPaces, allocator)
 	defer delete(psTspace)
 
 	if psTspace == nil {
@@ -192,7 +192,7 @@ generate_tangents :: proc(pContext: ^Context, fAngularThreshold: f32 = 180.0) ->
 	// make tspaces, each group is split up into subgroups if necessary
 	// based on fAngularThreshold. Finally a tangent space is made for
 	// every resulting subgroup
-	bRes = generate_t_spaces(psTspace, pTriInfos, pGroups, iNrActiveGroups, piTriListIn, fThresCos, pContext)
+	bRes = generate_t_spaces(psTspace, pTriInfos, pGroups, iNrActiveGroups, piTriListIn, fThresCos, pContext, allocator)
 
 	// clean up
 
@@ -359,7 +359,7 @@ Tmp_Vert :: struct {
 }
 
 @(private)
-g_cells := 2048
+G_CELLS :: 2048
 
 // it is IMPORTANT that this function is called to evaluate the hash since
 // inlining could potentially reorder instructions and generate different
@@ -367,13 +367,13 @@ g_cells := 2048
 // FindGridCell
 @(private)
 find_grid_cell :: #force_no_inline proc(fMin: f32, fMax: f32, fVal: f32) -> int {
-	fIndex := f32(g_cells) * ((fVal - fMin) / (fMax - fMin))
+	fIndex := f32(G_CELLS) * ((fVal - fMin) / (fMax - fMin))
 	iIndex := int(fIndex)
-	return iIndex < g_cells ? (iIndex >= 0 ? iIndex : 0) : (g_cells - 1)
+	return iIndex < G_CELLS ? (iIndex >= 0 ? iIndex : 0) : (G_CELLS - 1)
 }
 
 @(private)
-generate_shared_vertices_index_list :: proc(piTriList_in_and_out: []int, pContext: ^Context, iNrTrianglesIn: int) {
+generate_shared_vertices_index_list :: proc(piTriList_in_and_out: []int, pContext: ^Context, iNrTrianglesIn: int, allocator := context.allocator) {
 	// Generate bounding box
 	iChannel: int
 	iMaxCount: int
@@ -408,16 +408,16 @@ generate_shared_vertices_index_list :: proc(piTriList_in_and_out: []int, pContex
 	}
 
 	// make allocations
-	piHashTable := make([]int, iNrTrianglesIn * 3)
+	piHashTable := make([]int, iNrTrianglesIn * 3, allocator)
 	defer delete(piHashTable)
 
-	piHashCount := make([]int, g_cells)
+	piHashCount := make([]int, G_CELLS, allocator)
 	defer delete(piHashCount)
 
-	piHashOffsets := make([]int, g_cells)
+	piHashOffsets := make([]int, G_CELLS, allocator)
 	defer delete(piHashOffsets)
 
-	piHashCount2 := make([]int, g_cells)
+	piHashCount2 := make([]int, G_CELLS, allocator)
 	defer delete(piHashCount2)
 
 	if piHashTable == nil || piHashCount == nil || piHashOffsets == nil || piHashCount2 == nil {
@@ -436,7 +436,7 @@ generate_shared_vertices_index_list :: proc(piTriList_in_and_out: []int, pContex
 
 	// evaluate start index of each cell.
 	piHashOffsets[0] = 0
-	for k in 1 ..< g_cells {
+	for k in 1 ..< G_CELLS {
 		piHashOffsets[k] = piHashOffsets[k - 1] + piHashCount[k - 1]
 	}
 
@@ -453,24 +453,24 @@ generate_shared_vertices_index_list :: proc(piTriList_in_and_out: []int, pContex
 		piHashCount2[iCell] += 1
 	}
 
-	for k in 0 ..< g_cells {
+	for k in 0 ..< G_CELLS {
 		assert(piHashCount2[k] == piHashCount[k]) // verify the count
 	}
 
 	// find maximum amount of entries in any hash entry
 	iMaxCount = piHashCount[0]
 
-	for k in 1 ..< g_cells {
+	for k in 1 ..< G_CELLS {
 		if iMaxCount < piHashCount[k] {
 			iMaxCount = piHashCount[k]
 		}
 	}
 
-	pTmpVert := make([]Tmp_Vert, iMaxCount)
+	pTmpVert := make([]Tmp_Vert, iMaxCount, allocator)
 	defer delete(pTmpVert)
 
 	// complete the merge
-	for k in 0 ..< g_cells {
+	for k in 0 ..< G_CELLS {
 		// extract table of cell k and amount of entries in it
 		pTable := piHashTable[piHashOffsets[k]:]
 		iEntries := piHashCount[k]
@@ -855,7 +855,7 @@ calc_tex_area :: proc(pContext: ^Context, indices: []int) -> f32 {
 }
 
 @(private)
-init_tri_info :: proc(pTriInfos: []Tri_Info, piTriListIn: []int, pContext: ^Context, iNrTrianglesIn: int) {
+init_tri_info :: proc(pTriInfos: []Tri_Info, piTriListIn: []int, pContext: ^Context, iNrTrianglesIn: int, allocator := context.allocator) {
 	// pTriInfos[f].iFlag is cleared in GenerateInitialVerticesIndexList() which is called before this function.
 
 	// generate neighbor info list
@@ -964,7 +964,7 @@ init_tri_info :: proc(pTriInfos: []Tri_Info, piTriListIn: []int, pContext: ^Cont
 
 	// match up edge pairs
 	{
-		pEdges := make([]Edge, iNrTrianglesIn * 3)
+		pEdges := make([]Edge, iNrTrianglesIn * 3, allocator)
 		defer delete(pEdges)
 		if pEdges == nil {
 			build_neighbors_slow(pTriInfos, piTriListIn, iNrTrianglesIn)
@@ -1104,6 +1104,7 @@ generate_t_spaces :: proc(
 	piTriListIn: []int,
 	fThresCos: f32,
 	pContext: ^Context,
+	allocator := context.allocator,
 ) -> bool {
 	iMaxNrFaces, iUniqueTspaces: int
 	for g in 0 ..< iNrActiveGroups {
@@ -1115,13 +1116,13 @@ generate_t_spaces :: proc(
 	if iMaxNrFaces == 0 do return true
 
 	// make initial allocations
-	pSubGroupTspace := make([]T_Space, iMaxNrFaces)
+	pSubGroupTspace := make([]T_Space, iMaxNrFaces, allocator)
 	defer delete(pSubGroupTspace)
 
-	pUniSubGroups := make([]Sub_Group, iMaxNrFaces)
+	pUniSubGroups := make([]Sub_Group, iMaxNrFaces, allocator)
 	defer delete(pUniSubGroups)
 
-	pTmpMembers := make([]int, iMaxNrFaces)
+	pTmpMembers := make([]int, iMaxNrFaces, allocator)
 	defer delete(pTmpMembers)
 
 	if pSubGroupTspace == nil || pUniSubGroups == nil || pTmpMembers == nil {
@@ -1209,7 +1210,7 @@ generate_t_spaces :: proc(
 			// if no match was found we allocate a new subgroup
 			if !bFound {
 				// insert new subgroup
-				pIndices := make([]int, iMembers)
+				pIndices := make([]int, iMembers, allocator)
 				if pIndices == nil {
 					// clean up and return false
 					for s in 0 ..< iUniqueSubGroups {

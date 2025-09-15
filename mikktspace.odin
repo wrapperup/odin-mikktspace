@@ -4,7 +4,7 @@
  *  Odin style. Original source: https://github.com/mmikk/MikkTSpace
  *
  *  Original work: Copyright (C) 2011 by Morten S. Mikkelsen
- *  Modified work: Copyright (C) 2024 by Matthew Taylor
+ *  Modified work: Copyright (C) 2024 by Wrapperup
  *
  *  This software is provided 'as-is', without any express or implied
  *  warranty.  In no event will the authors be held liable for any damages

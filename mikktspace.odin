@@ -525,7 +525,7 @@ merge_verts_fast :: proc(piTriList_in_and_out: []int, pTmpVert: []Tmp_Vert, pCon
 	// is no longer strictly between fMin and fMax values.
 	if fSep >= fvMax[channel] || fSep <= fvMin[channel] {
 		// complete the weld
-		for l in 0 ..= iR_in {
+		for l in iL_in ..= iR_in {
 			i := pTmpVert[l].index
 			index := piTriList_in_and_out[i]
 			vP := get_position(pContext, index)

@@ -908,7 +908,7 @@ init_tri_info :: proc(pTriInfos: []Tri_Info, piTriListIn: []int, pContext: ^Cont
 			fAbsArea := math.abs(fSignedAreaSTx2)
 			fLenOs := linalg.length(vOs)
 			fLenOt := linalg.length(vOt)
-			fS: f32 = .OrientPreserving in pTriInfos[f].iFlag ? (-1.0) : 1.0
+			fS: f32 = .OrientPreserving in pTriInfos[f].iFlag ? 1.0 : (-1.0)
 			if fLenOs != 0.0 do pTriInfos[f].vOs = (fS / fLenOs) * vOs
 			if fLenOt != 0.0 do pTriInfos[f].vOt = (fS / fLenOt) * vOt
 

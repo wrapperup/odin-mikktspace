@@ -898,7 +898,7 @@ init_tri_info :: proc(pTriInfos: []Tri_Info, piTriListIn: []int, pContext: ^Cont
 		fSignedAreaSTx2 := t21x * t31y - t21y * t31x
 
 		vOs := (t31y * d1) - (t21y * d2)
-		vOt := (-t31x * d1) - (t21x * d2)
+		vOt := (-t31x * d1) + (t21x * d2)
 
 		if fSignedAreaSTx2 > 0.0 {
 			pTriInfos[f].iFlag |= {.OrientPreserving}

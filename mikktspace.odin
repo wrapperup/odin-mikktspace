@@ -115,13 +115,13 @@ generate_tangents :: proc(pContext: ^Context, fAngularThreshold: f32 = 180.0, al
 	if piTriListIn == nil {
 		return false
 	}
-	defer delete(piTriListIn)
+	defer delete(piTriListIn, allocator)
 
 	pTriInfos := make([]Tri_Info, iNrTrianglesIn, allocator)
 	if pTriInfos == nil {
 		return false
 	}
-	defer delete(pTriInfos)
+	defer delete(pTriInfos, allocator)
 
 	// make an initial triangle . face index list
 	iNrTSPaces = generate_initial_vertices_index_list(pTriInfos, piTriListIn, pContext, iNrTrianglesIn)
@@ -160,10 +160,10 @@ generate_tangents :: proc(pContext: ^Context, fAngularThreshold: f32 = 180.0, al
 	iNrMaxGroups = iNrTrianglesIn * 3
 
 	pGroups := make([]Group, iNrMaxGroups, allocator)
-	defer delete(pGroups)
+	defer delete(pGroups, allocator)
 
 	piGroupTrianglesBuffer := make([]int, iNrTrianglesIn * 3, allocator)
-	defer delete(piGroupTrianglesBuffer)
+	defer delete(piGroupTrianglesBuffer, allocator)
 
 	if pGroups == nil || piGroupTrianglesBuffer == nil {
 		return false
@@ -172,7 +172,7 @@ generate_tangents :: proc(pContext: ^Context, fAngularThreshold: f32 = 180.0, al
 	iNrActiveGroups = build_4_rule_groups(pTriInfos, pGroups, piGroupTrianglesBuffer, piTriListIn, iNrTrianglesIn)
 
 	psTspace := make([]T_Space, iNrTSPaces, allocator)
-	defer delete(psTspace)
+	defer delete(psTspace, allocator)
 
 	if psTspace == nil {
 		return false
@@ -409,16 +409,16 @@ generate_shared_vertices_index_list :: proc(piTriList_in_and_out: []int, pContex
 
 	// make allocations
 	piHashTable := make([]int, iNrTrianglesIn * 3, allocator)
-	defer delete(piHashTable)
+	defer delete(piHashTable, allocator)
 
 	piHashCount := make([]int, G_CELLS, allocator)
-	defer delete(piHashCount)
+	defer delete(piHashCount, allocator)
 
 	piHashOffsets := make([]int, G_CELLS, allocator)
-	defer delete(piHashOffsets)
+	defer delete(piHashOffsets, allocator)
 
 	piHashCount2 := make([]int, G_CELLS, allocator)
-	defer delete(piHashCount2)
+	defer delete(piHashCount2, allocator)
 
 	if piHashTable == nil || piHashCount == nil || piHashOffsets == nil || piHashCount2 == nil {
 		generate_shared_vertices_index_list_slow(piTriList_in_and_out, pContext, iNrTrianglesIn)
@@ -467,7 +467,7 @@ generate_shared_vertices_index_list :: proc(piTriList_in_and_out: []int, pContex
 	}
 
 	pTmpVert := make([]Tmp_Vert, iMaxCount, allocator)
-	defer delete(pTmpVert)
+	defer delete(pTmpVert, allocator)
 
 	// complete the merge
 	for k in 0 ..< G_CELLS {
@@ -965,7 +965,7 @@ init_tri_info :: proc(pTriInfos: []Tri_Info, piTriListIn: []int, pContext: ^Cont
 	// match up edge pairs
 	{
 		pEdges := make([]Edge, iNrTrianglesIn * 3, allocator)
-		defer delete(pEdges)
+		defer delete(pEdges, allocator)
 		if pEdges == nil {
 			build_neighbors_slow(pTriInfos, piTriListIn, iNrTrianglesIn)
 		} else {
@@ -1117,13 +1117,13 @@ generate_t_spaces :: proc(
 
 	// make initial allocations
 	pSubGroupTspace := make([]T_Space, iMaxNrFaces, allocator)
-	defer delete(pSubGroupTspace)
+	defer delete(pSubGroupTspace, allocator)
 
 	pUniSubGroups := make([]Sub_Group, iMaxNrFaces, allocator)
-	defer delete(pUniSubGroups)
+	defer delete(pUniSubGroups, allocator)
 
 	pTmpMembers := make([]int, iMaxNrFaces, allocator)
-	defer delete(pTmpMembers)
+	defer delete(pTmpMembers, allocator)
 
 	if pSubGroupTspace == nil || pUniSubGroups == nil || pTmpMembers == nil {
 		return false
@@ -1214,7 +1214,7 @@ generate_t_spaces :: proc(
 				if pIndices == nil {
 					// clean up and return false
 					for s in 0 ..< iUniqueSubGroups {
-						delete(pUniSubGroups[s].pTriMembers)
+						delete(pUniSubGroups[s].pTriMembers, allocator)
 					}
 					return false
 				}
@@ -1254,7 +1254,7 @@ generate_t_spaces :: proc(
 
 		// clean up and offset iUniqueTspaces
 		for s in 0 ..< iUniqueSubGroups {
-			delete(pUniSubGroups[s].pTriMembers)
+			delete(pUniSubGroups[s].pTriMembers, allocator)
 		}
 		iUniqueTspaces += iUniqueSubGroups
 	}

@@ -525,7 +525,7 @@ merge_verts_fast :: proc(piTriList_in_and_out: []int, pTmpVert: []Tmp_Vert, pCon
 	// is no longer strictly between fMin and fMax values.
 	if fSep >= fvMax[channel] || fSep <= fvMin[channel] {
 		// complete the weld
-		for l in 0 ..= iR_in {
+		for l in iL_in ..= iR_in {
 			i := pTmpVert[l].index
 			index := piTriList_in_and_out[i]
 			vP := get_position(pContext, index)
@@ -898,7 +898,7 @@ init_tri_info :: proc(pTriInfos: []Tri_Info, piTriListIn: []int, pContext: ^Cont
 		fSignedAreaSTx2 := t21x * t31y - t21y * t31x
 
 		vOs := (t31y * d1) - (t21y * d2)
-		vOt := (-t31x * d1) - (t21x * d2)
+		vOt := (-t31x * d1) + (t21x * d2)
 
 		if fSignedAreaSTx2 > 0.0 {
 			pTriInfos[f].iFlag |= {.OrientPreserving}
@@ -908,7 +908,7 @@ init_tri_info :: proc(pTriInfos: []Tri_Info, piTriListIn: []int, pContext: ^Cont
 			fAbsArea := math.abs(fSignedAreaSTx2)
 			fLenOs := linalg.length(vOs)
 			fLenOt := linalg.length(vOt)
-			fS: f32 = .OrientPreserving in pTriInfos[f].iFlag ? (-1.0) : 1.0
+			fS: f32 = .OrientPreserving in pTriInfos[f].iFlag ? 1.0 : (-1.0)
 			if fLenOs != 0.0 do pTriInfos[f].vOs = (fS / fLenOs) * vOs
 			if fLenOt != 0.0 do pTriInfos[f].vOt = (fS / fLenOt) * vOt
 
